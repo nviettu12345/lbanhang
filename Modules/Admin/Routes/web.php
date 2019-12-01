@@ -41,7 +41,7 @@ Route::prefix('admin')->group(function() {
         Route::get('/create','AdminAttrProductController@create')->name('admin.get.create.attr.product');
         Route::post('/create','AdminAttrProductController@store')->name('admin.post.create.attr.product');
         Route::get('/update/{id}','AdminAttrProductController@edit')->name('admin.get.edit.attr.product');
-        Route::post('/update/{id}','AdminAttrProductController@update');
+        Route::post('/update/{id}','AdminAttrProductController@update')->name('admin.ajax.edit.attr.product');;
         Route::get('/action/{action}/{id}','AdminAttrProductController@action')->name('admin.get.action.attr.product');
         Route::post('/action/{action}/{id}','AdminAttrProductController@action')->name('admin.ajax.action.attr.product');
         Route::post('/action/{actionAll}','AdminAttrProductController@action')->name('admin.ajax.actionAll.attr.product');

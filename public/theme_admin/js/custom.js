@@ -5,7 +5,7 @@ $(function(){
     }
     });
     // ajax active hiên/ ẩn 
-    $(".btn_active").click(function(e){
+    $('body').on('click', '.btn_active', function(e) {
         e.preventDefault();
         let $this=$(this);
         let url=$this.attr("href");
@@ -31,7 +31,7 @@ $(function(){
     });
 
      // ajax xóa 1 hàng trong admin 
-     $(".xoa").click(function(e){
+     $('body').on('click', '.xoa', function(e) {
         e.preventDefault();
         if(!confirm('bạn chắc chắn muốn xóa dữ liệu ?'))
         {
@@ -39,7 +39,7 @@ $(function(){
         }
         let $this=$(this);
         let url=$this.attr("href");
-      
+        console.log(url);
         $.ajax({
                 url: url,
                 type:'POST',
@@ -47,7 +47,7 @@ $(function(){
                 context:this,
                 })    
                 .done(function(result) {
-         
+                  console.log(result);
                    $('tr.row_'+result.id).fadeOut();
                  
                   });
@@ -117,7 +117,7 @@ $(function(){
           });
 
           // set số thứ tự 
-          $(".num").change(function(e){
+          $('body').on('change', '.num', function(e) {
             e.preventDefault();
             let url=$(this).attr("url");
    

@@ -37,15 +37,15 @@
                     <input style="width:50px" type="number" id="num" name="num" value="{{old('num',isset($attr->num)?$attr->num:'0')}}">
                     </div>
                 </div>    
-                <a url="{{route('admin.post.create.attr.product')}}" style="color:white" class="btn btn-primary luu">Lưu thông tin</a>   
+                <a url="{{route('admin.post.create.attr.product')}}" style="color:white" class="btn btn-primary save">Lưu thông tin</a>   
             </div>
         </div>
 
   </div>
   <div class="col-sm-7">
       <div class="table-responsive">
-            <h2>Quản lý danh mục <span class="total">({{isset($total)?$total:''}})</span> </h2> 
-            <table class="table table-striped table-sm">
+            <h2>Quản lý danh mục thuộc tính <span class="total">({{isset($total)?$total:''}})</span> </h2> 
+            <table class="table table-striped table-sm" id="attr_table">
             <thead>
               <tr >
                 <th><input type="checkbox" id="group1" name="group1" onclick="checkAllJquery('group1', 'item1');"/></th>
@@ -62,12 +62,13 @@
                   <tr class="row_{{$attr->id}}">
                     <td><input type="checkbox" class="item1" name="id[]" value="{{$attr->id}}"></td>
                     <td><input class="num" type="text" style="width:30px;text-align:center" value="{{$attr->num}}" url="{{route('admin.ajax.action.attr.product',['order',$attr->id])}}"/></td>
-                    <td>{{$attr->name}}</td>
-                    <td>{{$attr->value}}</td>
+                    <td><span class="d-name{{$attr->id}}">{{$attr->name}}</span><input class="name{{$attr->id}} d-none" type="text" value="{{$attr->name}}"/></td>
+                    <td><span class="d-value{{$attr->id}}">{{$attr->value}}</span><input class="value{{$attr->id}} d-none" type="text" value="{{$attr->value}}"/></td>
                     <td><a href="{{route('admin.ajax.action.attr.product',['active',$attr->id])}}" class="badge {{$attr->active==1?'badge-danger':'badge-secondary'}} btn_active btn_active_{{$attr->id}}">{{$attr->active==1?'public':'private'}}</a></td>
                     <td>
-                    <a style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.get.edit.attr.product',$attr->id)}}"><i class="fas fa-pen"></i></a>
-                    <a class="xoa" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.ajax.action.attr.product',['delete',$attr->id])}}"><i class="fas fa-trash-alt "></i></a>
+                    <a class="edit edit{{$attr->id}}" data-id="{{$attr->id}}" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href=""><i class="fas fa-pen"></i></a>
+                    <a class="xoa xoa{{$attr->id}}" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.ajax.action.attr.product',['delete',$attr->id])}}"><i class="fas fa-trash-alt "></i></a>
+                    <a class="luu luu{{$attr->id}}" data-id="{{$attr->id}}" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.ajax.edit.attr.product',$attr->id)}}"><i class="fas fa-save "></i></a>
                     </td>
                   </tr>
               @endforeach
@@ -100,12 +101,12 @@
 @section('script')
     <script>
 
-        $(function(){
-            $(".luu").click(function(){
+$(document).ready(function() {
+  $('body').on('click', '.save', function() {
               let name=$("#name").val();
               let value=$("#value").val();
               let num=$("#num").val();
-              let active=$("#active").val();
+              let active=($("#active").is(":checked"))?'1':'0';
               let url=$(this).attr("url");
               console.log(name,value,num,active,url);
 
@@ -117,33 +118,70 @@
                         },
                     })    
                     .done(function(result) {
+                      console.log(result);
                       $("#name").val('');
                       $("#value").val('');
                       $("#num").val('0');  
-                      $html='';
-                      $html+='<tr class="row_{{$attr->id}}">';
-                      $html+='<td><input type="checkbox" class="item1" name="id[]" value="{{$attr->id}}"></td>';
-                      $html+='<td></td>';
-                      $html+='<td></td>';
-                      $html+='<td></td>';
-                      $html+='<td></td>';
-                              
-  
-                    <td><input class="num" type="text" style="width:30px;text-align:center" value="{{$attr->num}}" url="{{route('admin.ajax.action.attr.product',['order',$attr->id])}}"/></td>
-                    <td>{{$attr->name}}</td>
-                    <td>{{$attr->value}}</td>
-                    <td><a href="{{route('admin.ajax.action.attr.product',['active',$attr->id])}}" class="badge {{$attr->active==1?'badge-danger':'badge-secondary'}} btn_active btn_active_{{$attr->id}}">{{$attr->active==1?'public':'private'}}</a></td>
-                    <td>
-                    <a style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.get.edit.attr.product',$attr->id)}}"><i class="fas fa-pen"></i></a>
-                    <a class="xoa" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="{{route('admin.ajax.action.attr.product',['delete',$attr->id])}}"><i class="fas fa-trash-alt "></i></a>
-                    </td>
-                  </tr>
+        
+                      let href=window.location.href;
+                      html='';
+                      html+='<tr class="row_'+result+'">';
+                      html+='<td><input type="checkbox" class="item1" name="id[]" value="'+result+'"></td>';
+                      html+='<td><input class="num" type="text" style="width:30px;text-align:center" value="'+num+'" url="'+href+'/action/order/'+result+'"/></td>';
+                      html+='<td><span class="d-name'+result+'">'+name+'</span><input class="name'+result+' d-none" type="text" value="'+name+'"/></td>';
+                      html+='<td><span class="d-value'+result+'">'+value+'</span><input class="value'+result+' d-none" type="text" value="'+value+'"/></td>';
+                      html+='<td><a href="'+href+'/action/active/'+result+'" class="badge badge-danger btn_active btn_active_'+result+'">public</a></td>';
+                      html+='<td>';
+                      html+='<a class="edit edit'+result+'" data-id="'+result+'" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href=""><i class="fas fa-pen"></i></a>';
+                      html+='<a class="xoa xoa'+result+'" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="'+href+'/action/delete/'+result+'"><i class="fas fa-trash-alt "></i></a>';
+                      html+='<a class="d-none luu luu'+result+'" data-id="'+result+'" style="padding:5px 5px; border:1px #ggg solid;font-size:12px" href="'+href+'/update/'+result+'"><i class="fas fa-save"></i></a>';
+                      html+='</td>';
+                      html+='</tr>';
+                      $("#attr_table").append(html);
+
                     });
             });
+  $('body').on('click', '.edit', function(e) {
+    e.preventDefault();
+    let id=$(this).attr("data-id");
+    console.log(id);
+    $(".name"+id).removeClass("d-none");
+    $(".d-name"+id).addClass("d-none");
+    $(".value"+id).removeClass("d-none");
+    $(".d-value"+id).addClass("d-none");
+    $(".edit"+id).addClass("d-none");
+    $(".xoa"+id).addClass("d-none");
+    $(".luu"+id).removeClass("d-none");
+  });   
 
-            
+   $('body').on('click', '.luu', function(e) {
+    e.preventDefault();
+    let id=$(this).attr("data-id");
+    $(".name"+id).addClass("d-none");
+    $(".d-name"+id).removeClass("d-none");
+    $(".value"+id).addClass("d-none");
+    $(".d-value"+id).removeClass("d-none");
+    $(".edit"+id).removeClass("d-none");
+    $(".xoa"+id).removeClass("d-none");
+    $(".luu"+id).addClass("d-none");
+
+    let name= $(".name"+id).val();
+    let value= $(".value"+id).val();
+    let url = $(".luu"+id).attr("href");
+    
+    $.ajax({
+                url: url,
+                type:'POST',
+                data: {'name':name,'value':value},
+                context:this,
+                })    
+                .done(function(result) {
+                  $(".d-name"+id).html(name);
+                  $(".d-value"+id).html(value);
+                  });
+  });       
 
         });
-
+ $(".luu").addClass("d-none");
     </script>
 @stop
