@@ -2,18 +2,40 @@
 
 namespace Modules\Admin\Http\Controllers;
 
+use App\Http\Requests\RequestProduct;
+use App\Models\Attr_product;
+use App\Models\Category;
+use App\Models\Cattype;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Str;
 
 
 class AdminProductController extends Controller
 {
     public function index(Request $request)
     {
-      $viewData=[
-          
+        $cataloglist=Category::all();
+        $products=Product::with('category:id,name');
+        //loc san pham theo name
+        if(isset($request->name)) $products->where('name', 'like','%'.$request->name.'%');
+        //loc san pham theo danh mục
+        if(isset($request->cate)) {
+            $products->where('cat_id',$request->cate);
+            $catalogTree=showCategories($cataloglist,0,'',$request->cate,6);
+        }
+        else{
+            $catalogTree=showCategories($cataloglist,0,'','',6);
+        }
+        $products=$products->paginate(20);
+        $total=$products->count();
+        
+        $viewData=[
+        'catalogTree'=>$catalogTree,
+        'products' => $products,
+        'total' => $total
         ];
         return view('admin::product.index',$viewData);
     }
@@ -22,17 +44,18 @@ class AdminProductController extends Controller
     {
         $cattype=Cattype::select('id','name')->get();
         $cataloglist=Category::all();
-        $catalogTree=showCategories($cataloglist,0,'','',9);
+        $catalogTree=showCategories($cataloglist,0,'','',6);
+        $attrs=Attr_product::all();
         $viewData=[
-            'cattype'=>$cattype,
-             'catalogTree'=>$catalogTree
+             'catalogTree'=>$catalogTree,
+             'attrs' =>$attrs
         ];
-        return view('admin::category.create',$viewData);
+        return view('admin::product.create',$viewData);
     }
 
-    public function store(RequestCategory $requestCategory)
+    public function store(RequestProduct $requestProduct)
     {
-        $this->insertOrUpdate($requestCategory);
+        $this->insertOrUpdate($requestProduct);
      
       
       return redirect()->back()->with('success','thêm mới thành công');
@@ -42,58 +65,112 @@ class AdminProductController extends Controller
     public function edit($id)
     {
         $cataloglist=Category::all();
-        $catalogTree=showCategories($cataloglist,0,'','',9);
-        $category=Category::find($id);
-        $cattype=Cattype::select('id','name')->get();
+        
+        $product=Product::find($id);
+        $catalogTree=showCategories($cataloglist,0,'',$product->cat_id,9);
+        $attrs=Attr_product::all();
         $viewData=[
-            'cattype'=>$cattype,
-            'category'=>$category,
-            'catalogTree' => $catalogTree
+            'product'=>$product,
+            'catalogTree' => $catalogTree,
+            'attrs' =>$attrs
         ];
-        return view('admin::category.update',$viewData);
+        return view('admin::product.update',$viewData);
     }
 
-    public function update(RequestCategory $requestCategory,$id)
+    public function update(RequestProduct $requestProduct,$id)
     {
         
-        $this->insertOrUpdate($requestCategory,$id);
+        $this->insertOrUpdate($requestProduct,$id);
 
       return redirect()->back()->with('success','cập nhật thành công');
     }
 
-    public function insertOrUpdate($requestCategory,$id='')
+    public function insertOrUpdate($requestProduct,$id='')
     {
 
-            $category=new Category();
+            $product=new Product();
 
             if($id){
-                $category=Category::find($id);
+                $product=Product::find($id);
+                // kiểm tra có file upload không
+                if($requestProduct->hasFile('img') && $product->img){
+                    $path="upload/product";
+                    delete_img($path,$product);
+                }
+                // kiểm tra có file upload không 
+                if($requestProduct->hasFile('img_list') && $product->img_list){
+                     // xóa hình ảnh trong thư mục chứa
+                     $path="upload/product";
+                     delete_img($path,$product,$product->img_list);
+                }
+
             }
           
-          $category->name=$requestCategory->name;
-          $category->pid=$requestCategory->pid;
-          $category->type=$requestCategory->type;
-          $category->description=$requestCategory->description;
-          $category->content=$requestCategory->content;
-          $category->ext_url=$requestCategory->ext_url;
-          $category->slug=$requestCategory->slug?$requestCategory->slug:Str::slug($requestCategory->name);
-          $category->seo_title=$requestCategory->title?$requestCategory->title:$requestCategory->name;
-          $category->seo_description=$requestCategory->seo_description;
-          $category->active=$requestCategory->active?'1':'0';
-          $category->num=$requestCategory->num;
-          
-          if($requestCategory->hasFile('img')){
-         
-              $path='upload/category';
+          $product->name=$requestProduct->name;
+          $product->cat_id=$requestProduct->cat_id;
+          $product->code=$requestProduct->code;
+          $product->price=$requestProduct->price;
+          $product->sale=$requestProduct->sale;
+          $product->description=$requestProduct->description;
+          $product->content=$requestProduct->content;
+          $product->ext_url=$requestProduct->ext_url;
+          $product->hot=$requestProduct->hot?'1':'0';
+          $product->is_noindex=$requestProduct->is_noindex?'1':'0';
+          $product->slug=$requestProduct->slug?$requestProduct->slug:Str::slug($requestProduct->name);
+          $product->seo_title=$requestProduct->title?$requestProduct->title:$requestProduct->name;
+          $product->seo_description=$requestProduct->seo_description;
+          $product->active=$requestProduct->active?'1':'0';
+            
+          // xu ly the tag
+			$tag=array();
+			$tag_vn=strval($requestProduct->tag);
+			$tag_vn=explode(",", $tag_vn);
+	    	foreach ($tag_vn as $key => $value) {
+                $tag[$key]['name_tag']=$value;
+                $tag[$key]['slug_tag']=Str::slug($value);
+	    	}
+            $product->tag=json_encode($tag);
+
+            // xu ly thuoc tinh sản phẩm
+				$attr=array();
+				$value=array();
+				$value=$requestProduct->value;
+                $attr=$requestProduct->attr;
+                $attrs=array();
+                for($i=0;$i<count($attr);$i++){
+                    $attrs[$i]=array(
+                        'name' => $attr[$i],
+                        'value' => $value[$i]
+                    );
+                }
+           
+				// $attr=array_combine($name, $value);
+				$product->attr=json_encode($attrs);
+          //upload 1 file
+          if($requestProduct->hasFile('img')){
+            
+              $path='upload/product';
               
-              $file=upload_image('img',$path,$requestCategory);
+              $file=upload_image('img',$path,$requestProduct);
               
               if(isset($file)){
-                  $category->img=$file;
+                  $product->img=$file;
               }
           }
+
+          // uppload nhiều file
+          if($requestProduct->hasFile('img_list')){
+         
+            $path='upload/product';
+            
+            $file=upload_image_list('img_list',$path,$requestProduct);
+            
+            if(isset($file)){
+                $product->img_list=json_encode($file);
+            }
+        }
           
-        $category->save();
+        $product->save();
     }
 
     public function action(Request $request,$action,$id='')
@@ -105,56 +182,74 @@ class AdminProductController extends Controller
 
             if($action)
             {
-                    $category=Category::find($id);
+                    $product=Product::find($id);
                     $info= array(
                         'active' => '',
+                        'hot' => '',
                         'mess' => '',
                         'id'=>'',
                         'activeAll' =>''
                     );
                     switch ($action) {
                         case 'delete':
-                            $category->delete();
+                            $path="upload/product";
+                            delete_img($path,$product);
+                            delete_img($path,$product,$product->img_list);
+                            $product->delete();
                             $info['mess']="xóa dữ liệu thành công";
                             $info['id']=$id;
                             break;
                         case 'active':
-                            $category->active = $category->active?0:1;
-                            $category->save();
+                            $product->active = $product->active?0:1;
+                            $product->save();
                             $info['mess']="cập nhật dữ liệu thành công";
-                            $info['active']=$category->active;
+                            $info['active']=$product->active;
+                            break;   
+                        case 'hot':
+                            $product->hot = $product->hot?0:1;
+                            $product->save();
+                            $info['mess']="cập nhật dữ liệu thành công";
+                            $info['hot']=$product->hot;
                             break;   
                         case 'order':
-                            $category->num=$request->num;
-                            $category->save();
+                            $product->num=$request->num;
+                            $product->save();
                             break;   
                         case 'delImg':
                             // xóa hình ảnh trong thư mục chứa
-                            $path="upload/category/".$category->img;
-                            if(file_exists($path))
-                            {
-                                unlink($path);
-                            }
-                            $category->img='';
-                            $category->save();
-                            break;
+                            $path="upload/product";
+                            delete_img($path,$product);
+                            break; 
+                        case 'delImgList':
+                            // xóa hình ảnh trong thư mục chứa
+                            $path="upload/product";
+                            delete_img($path,$product,$product->img_list);
+                            break;   
                     }
             }
             if($action=='deleteAll')
             {
-                Category::whereIn('id',$ids)->delete();
+                 //xoa hinh anh khi xoa nhiều
+                 foreach($ids as $id){
+                    $product=Product::find($id);
+                    $path="upload/product";
+                    delete_img($path,$product);
+                    delete_img($path,$product,$product->img_list);
+                }
+
+                Product::whereIn('id',$ids)->delete();
                 return $ids;    
             }
             if($action=='activeAll')
             {
                 $active=array();
                 foreach($ids as $id){
-                    $category=Category::find($id);
-                    $category->active = $category->active?0:1;
-                    $category->save();
+                    $product=Product::find($id);
+                    $product->active = $product->active?0:1;
+                    $product->save();
                     $result=array(
                         'id' => $id,
-                        'active' => $category->active
+                        'active' => $product->active
                     );
                     array_push($active,$result);
                 }
@@ -170,11 +265,11 @@ class AdminProductController extends Controller
         {
             $error= array(
                 'error' => '',
-                'mess' => 'bạn chưa chọn đúng danh mục có danh mục con'
+                'mess' => 'bạn chưa chọn đúng danh mục chứa sản phẩm'
             );
             $id=$request->pid;
             $Catogory=Category::find($id);
-            if($Catogory->type!='9')
+            if($Catogory->type!='6')
             {
                 $error['error']='a';
             }

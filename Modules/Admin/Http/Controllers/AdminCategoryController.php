@@ -4,8 +4,10 @@ namespace Modules\Admin\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use App\Http\Requests\RequestCategory;
+use App\Models\Article;
 use App\Models\Category;
 use App\Models\Cattype;
+use App\Models\Product;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\Request;
 use Illuminate\Support\Str;
@@ -40,9 +42,11 @@ class AdminCategoryController extends Controller
         $cattype=Cattype::select('id','name')->get();
         $cataloglist=Category::all();
         $catalogTree=showCategories($cataloglist,0,'','',9);
+        $homepage=Category::where('type',1)->get()->count();
         $viewData=[
             'cattype'=>$cattype,
-             'catalogTree'=>$catalogTree
+             'catalogTree'=>$catalogTree,
+             'homepage' => $homepage
         ];
         return view('admin::category.create',$viewData);
     }
@@ -61,11 +65,13 @@ class AdminCategoryController extends Controller
         $cataloglist=Category::all();
         $catalogTree=showCategories($cataloglist,0,'','',9);
         $category=Category::find($id);
+        $homepage=Category::where('type',1)->get()->count();
         $cattype=Cattype::select('id','name')->get();
         $viewData=[
             'cattype'=>$cattype,
             'category'=>$category,
-            'catalogTree' => $catalogTree
+            'catalogTree' => $catalogTree,
+            'homepage' => $homepage
         ];
         return view('admin::category.update',$viewData);
     }
@@ -85,6 +91,12 @@ class AdminCategoryController extends Controller
 
             if($id){
                 $category=Category::find($id);
+                 // kiểm tra có file upload không
+                 if($requestCategory->hasFile('img') && $category->img){
+                    // xóa hình ảnh trong thư mục chứa nếu tồn tại
+                     $path="upload/category";
+                     delete_img($path,$category);
+              }
             }
           
           $category->name=$requestCategory->name;
@@ -94,11 +106,12 @@ class AdminCategoryController extends Controller
           $category->content=$requestCategory->content;
           $category->ext_url=$requestCategory->ext_url;
           $category->slug=$requestCategory->slug?$requestCategory->slug:Str::slug($requestCategory->name);
-          $category->seo_title=$requestCategory->title?$requestCategory->title:$requestCategory->name;
+          $category->seo_title=$requestCategory->seo_title?$requestCategory->seo_title:$requestCategory->name;
           $category->seo_description=$requestCategory->seo_description;
           $category->active=$requestCategory->active?'1':'0';
           $category->num=$requestCategory->num;
           
+          if($requestCategory->type==1)  $category->slug="/";
           if($requestCategory->hasFile('img')){
          
               $path='upload/category';
@@ -127,10 +140,39 @@ class AdminCategoryController extends Controller
                         'active' => '',
                         'mess' => '',
                         'id'=>'',
-                        'activeAll' =>''
+                        'activeAll' =>'',
+                        'is_deleted'=>'',
+                        'has_child'=>''
                     );
                     switch ($action) {
                         case 'delete':
+                            if( $category->is_deleted==0 || has_child($id))
+                            {
+                                $info['is_deleted']='0';
+                                return response()->json($info);  
+                            }
+                            // chuyen bài viết trong catalog qua danh muc bài viết chua phan loai
+                            if($category->type==5){
+                                $articles=Article::where('cat_id',$id)->get();
+                                foreach($articles as $article)
+                                {
+                                    $article->cat_id='32';
+                                    $article->save();
+                                }
+                            }
+                             // chuyen san pham trong catalog qua danh muc san pham chua phan loai
+                            if($category->type==6){
+                                $products=Product::where('cat_id',$id)->get();
+                                foreach($products as $product)
+                                {
+                                    $product->cat_id='33';
+                                    $product->save();
+                                }
+                            }
+                             // xóa hình ảnh trong thư mục chứa
+                            $path="upload/category";
+                            delete_img($path,$category);
+
                             $category->delete();
                             $info['mess']="xóa dữ liệu thành công";
                             $info['id']=$id;
@@ -147,19 +189,26 @@ class AdminCategoryController extends Controller
                             break;   
                         case 'delImg':
                             // xóa hình ảnh trong thư mục chứa
-                            $path="upload/category/".$category->img;
-                            if(file_exists($path))
-                            {
-                                unlink($path);
-                            }
-                            $category->img='';
-                            $category->save();
+                            $path="upload/category";
+                            delete_img($path,$category);
                             break;
                     }
             }
             if($action=='deleteAll')
             {
-                Category::whereIn('id',$ids)->delete();
+                //xoa hinh anh khi xoa nhiều
+                foreach($ids as $id){
+                    $category=Category::find($id);
+                    if( $category->is_deleted==0 || has_child($id))
+                            { 
+                                  $info=array();
+                                $info['is_deleted']='0';
+                                return response()->json($info);  
+                            }
+                    $path="upload/category";
+                    delete_img($path,$category);
+                    $category->delete();
+                }
                 return $ids;    
             }
             if($action=='activeAll')

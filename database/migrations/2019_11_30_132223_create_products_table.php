@@ -18,7 +18,7 @@ class CreateProductsTable extends Migration
             $table->string('name')->unique();
             $table->string('slug')->index();
             $table->integer('cat_id')->index();
-            $table->integer('code')->index()->nullable()->comment("mã sản phẩm");
+            $table->string('code')->index()->nullable()->comment("mã sản phẩm");
             $table->integer('price')->default(0);
             $table->tinyInteger('hot')->default(0);
             $table->integer('sale')->default(0);
@@ -38,6 +38,7 @@ class CreateProductsTable extends Migration
             $table->tinyInteger('active')->default(1)->index();
             $table->tinyInteger('pay')->default(0);
             $table->tinyInteger('number')->default(0);
+            $table->tinyInteger('is_noindex')->default(0);
             $table->integer('total_rating')->default(0)->comment("tổng số đánh giá");
             $table->integer('total_number')->default(0)->comment("tổng số điểm đánh giá");
             $table->timestamps();

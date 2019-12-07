@@ -1,27 +1,11 @@
-<style>
-    .img-wraps {
-    position: relative;
-    display: inline-block;
-    font-size: 0;
-    width: 100px;
-}
-.img-wraps .closes {
-    position: absolute;
-    right: 0px;
-    font-weight: bold;
-    cursor: pointer;
-
-    font-size: 22px;
-    line-height: 11px;
-    border-radius: 50%;
-}
-
-    </style>
-<form action="" method="POST" class="form-horizontal" enctype="multipart/form-data">
+<section class="content">
+    <div class="row">
+        <div class="col-md-12">
+    <form action="" method="POST" class="form-horizontal" enctype="multipart/form-data">
        @csrf
-    <div class="card">
+    <div class="card card-primary">
         <div class="card-header">
-        <h3>Quản lý danh mục</h3>
+        <h3  class="card-title">Quản lý danh mục</h3>
         </div>
         <div class="card-body">
             <div class="form-group row">
@@ -66,10 +50,10 @@
             <div class="form-group row">
                 <label  class="col-sm-2 col-form-label">Thể loại : </label>
                 <div class="col-sm-3">
-              <select class="form-control" name="type" id="type">
-                  <option value="">--- chọn thể loại ----</option>
+              <select class="form-control" name="type" id="type" data-id="{{isset($homepage)?$homepage:''}}">
+                  <option  value="">--- chọn thể loại ----</option>
                   @foreach($cattype as $type)
-                    <option {{isset($category)?($type->id==$category->type?'selected':''):''}} value="{{$type->id}}">{{$type->name}}</option>    
+                    <option class="type_{{$type->id}}" {{isset($category)?($type->id==$category->type?'selected':''):''}} value="{{$type->id}}">{{$type->name}}</option>    
                   @endforeach
               </select>
                   @if ($errors->has('type'))
@@ -113,7 +97,7 @@
             <div class="form-group row">
                 <label  class="col-sm-2 col-form-label">Tiêu đề : </label>
                 <div class="col-sm-10">
-                <input type="text" class="form-control" id="seo_title" name="title" value="{{old('title',isset($category->title)?$category->title:'')}}">
+                <input type="text" class="form-control" id="seo_title" name="seo_title" value="{{old('seo_title',isset($category->seo_title)?$category->seo_title:'')}}">
                 <small>thêm các ký tự sau cho nổi bật trên google: ⭐</small>   
                 <input style="width: 70px" type="text" name="key_title" class="form-control" id="key_title" value="100">
                  
@@ -156,17 +140,13 @@
         </div>
     </div>
             </form>
+            </div><!--/.col (right) -->
+    </div>
+</section>
 @section('script')
     <script>
         $(function(){
-    
-
-   
-
         });
-
           CKEDITOR.replace( 'content');
-
-   
     </script>
 @stop            
